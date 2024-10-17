@@ -1,81 +1,95 @@
-import streamlit as st
 import os
+import re
 import subprocess
-from moviepy.video.io.VideoFileClip import VideoFileClip
+from moviepy.editor import VideoFileClip
+import streamlit as st
 
-# Create the downloads directory if it doesn't exist
-if not os.path.exists('./downloads'):
-    os.makedirs('./downloads')
+# Directory for downloads
+DOWNLOAD_DIR = './downloads'
+
+# Create the download directory if it doesn't exist
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # Function to download YouTube video using yt-dlp
 def download_youtube_video(url):
-    download_path = './downloads'
+    # Sanitize URL by removing query parameters (everything after '?')
+    clean_url = re.sub(r'\?.*$', '', url)
+    
     try:
-        # Download the video using yt-dlp
-        command = f'yt-dlp {url} -o {download_path}/%(title)s.%(ext)s'
-        subprocess.run(command, shell=True, check=True)
-        video_files = [f for f in os.listdir(download_path) if f.endswith(".mp4")]
+        # yt-dlp command to download the video
+        command = f'yt-dlp {clean_url} -o "{DOWNLOAD_DIR}/%(title)s.%(ext)s"'
+        result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+
+        # Check for output files in the download directory
+        video_files = [f for f in os.listdir(DOWNLOAD_DIR) if f.endswith(".mp4")]
         if video_files:
-            video_file_path = os.path.join(download_path, video_files[0])
+            video_file_path = os.path.join(DOWNLOAD_DIR, video_files[0])
             return video_file_path
         else:
             return None
-    except Exception as e:
-        return f"Error: {e}"
+    except subprocess.CalledProcessError as e:
+        # Capture detailed error message
+        st.error(f"Download failed: {e.output or e.stderr}")
+        return None
 
-# Function to crop the video
-def crop_video(video_path, start_time, end_time, output_path):
+# Function to crop video using MoviePy
+def crop_video(input_path, start_time, end_time):
     try:
-        video = VideoFileClip(video_path)
-        cropped_video = video.subclip(start_time, end_time)
-        cropped_video.write_videofile(output_path, codec="libx264")
+        # Load video file
+        clip = VideoFileClip(input_path)
+        
+        # Crop the video by selecting the start and end times
+        cropped_clip = clip.subclip(start_time, end_time)
+        
+        # Generate the output file name
+        output_path = os.path.join(DOWNLOAD_DIR, f"cropped_{os.path.basename(input_path)}")
+        
+        # Write the cropped video to a new file
+        cropped_clip.write_videofile(output_path, codec='libx264')
+        
         return output_path
     except Exception as e:
-        return f"Error: {e}"
+        st.error(f"Failed to crop the video: {str(e)}")
+        return None
 
 # Streamlit Interface
-st.title("YouTube Video Downloader & Crop Tool")
-
-st.markdown(
-    """
-    This tool allows you to download a YouTube video and crop it by specifying start and end times. Enter a valid YouTube URL and customize your cropping preferences.
-    """
-)
-
-# User input for YouTube URL
-youtube_url = st.text_input("Enter YouTube Video URL")
-
-# Inputs for cropping times
-start_time = st.number_input("Start time for cropping (in seconds)", min_value=0, value=0)
-end_time = st.number_input("End time for cropping (in seconds)", min_value=1, value=10)
-
-# Button to download and crop the video
-if st.button("Download and Crop"):
-    if youtube_url:
-        video_file = download_youtube_video(youtube_url)
-        
-        if video_file and os.path.exists(video_file):
-            st.success(f"Video downloaded successfully: {video_file}")
-            
-            # Create cropped video path
-            cropped_video_path = './downloads/cropped_video.mp4'
-            
-            # Crop the video
-            result = crop_video(video_file, start_time, end_time, cropped_video_path)
-            
-            if os.path.exists(cropped_video_path):
-                st.success(f"Cropped video saved: {cropped_video_path}")
-                st.video(cropped_video_path)
+def main():
+    st.title("YouTube Video Downloader and Cropper")
+    
+    # User input for YouTube URL
+    video_url = st.text_input("Enter YouTube video URL:")
+    
+    # Download button
+    if st.button("Download Video"):
+        if video_url:
+            video_path = download_youtube_video(video_url)
+            if video_path:
+                st.success(f"Video downloaded successfully: {video_path}")
+                st.video(video_path)
             else:
-                st.error(f"Failed to crop the video: {result}")
-        else:
-            st.error(f"Failed to download video: {video_file}")
-    else:
-        st.error("Please enter a valid YouTube URL")
+                st.error("Failed to download video.")
+    
+    # Show cropper options if a video was downloaded
+    if os.listdir(DOWNLOAD_DIR):
+        st.subheader("Crop the downloaded video")
+        
+        # Allow the user to specify start and end times
+        start_time = st.number_input("Start time (seconds)", min_value=0)
+        end_time = st.number_input("End time (seconds)", min_value=0)
+        
+        # Get the latest downloaded video for cropping
+        downloaded_videos = [f for f in os.listdir(DOWNLOAD_DIR) if f.endswith(".mp4")]
+        if downloaded_videos:
+            latest_video = os.path.join(DOWNLOAD_DIR, downloaded_videos[-1])
+            
+            if st.button("Crop Video"):
+                if end_time > start_time:
+                    cropped_path = crop_video(latest_video, start_time, end_time)
+                    if cropped_path:
+                        st.success(f"Video cropped successfully: {cropped_path}")
+                        st.video(cropped_path)
+                else:
+                    st.error("End time must be greater than start time.")
 
-# Button to clear the downloads directory
-if st.button("Clear Downloads"):
-    if os.path.exists('./downloads'):
-        for file in os.listdir('./downloads'):
-            os.remove(os.path.join('./downloads', file))
-    st.success("Downloads folder cleared.")
+if __name__ == "__main__":
+    main()
