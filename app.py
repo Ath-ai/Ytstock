@@ -24,7 +24,7 @@ def crop_video(input_path, start_time, end_time):
     try:
         with VideoFileClip(input_path) as video:
             cropped_video = video.subclip(start_time, end_time)
-            cropped_video.write_videofile(output_path, codec='libx264')
+            cropped_video.write_videofile(output_path, codec='libx264', audio_codec='aac')
         return output_path
     except Exception as e:
         st.error(f"Failed to crop the video: {e}")
@@ -38,6 +38,7 @@ def main():
     if 'downloaded' not in st.session_state:
         st.session_state.downloaded = False
         st.session_state.temp_dir = None  # Store temp directory in session state
+        st.session_state.cropped_video_path = None  # Store cropped video path in session state
 
     url = st.text_input("Enter YouTube video URL:")
     if st.button("Download"):
@@ -63,6 +64,9 @@ def main():
                         if end_time > start_time:
                             cropped_video_path = crop_video(video_path, start_time, end_time)
                             if cropped_video_path:
+                                st.session_state.cropped_video_path = cropped_video_path  # Save the cropped video path
+                                st.success("Video cropped successfully!")
+                                st.video(cropped_video_path)  # Display the cropped video
                                 with open(cropped_video_path, "rb") as f:
                                     st.download_button("Download Cropped Video", f, file_name="cropped_video.mp4")
                         else:
@@ -83,6 +87,7 @@ def main():
             os.rmdir(st.session_state.temp_dir)  # Remove the temporary directory
             st.session_state.temp_dir = None  # Reset temp_dir
         st.session_state.downloaded = False  # Reset downloaded flag
+        st.session_state.cropped_video_path = None  # Reset cropped video path
         st.experimental_rerun()  # Refresh the page
 
 if __name__ == "__main__":
