@@ -29,6 +29,12 @@ def crop_video(input_path, start_time, end_time):
         st.error(f"Failed to crop the video: {e}")
         return None
 
+# Function to format time
+def format_time(seconds):
+    minutes = int(seconds // 60)
+    seconds = int(seconds % 60)
+    return f"{minutes} minutes {seconds} seconds"
+
 # Main app function
 def main():
     st.title("YouTube Video Downloader and Cropper")
@@ -69,6 +75,10 @@ def main():
     if st.session_state.downloaded:
         start_time = st.number_input("Start Time (in seconds)", min_value=0.0, value=0.0)
         end_time = st.number_input("End Time (in seconds)", min_value=0.0, value=10.0)
+
+        # Display formatted time
+        st.write(f"Start Time: {format_time(start_time)}")
+        st.write(f"End Time: {format_time(end_time)}")
 
         # Crop button
         if st.button("Crop Video"):
