@@ -32,8 +32,9 @@ def crop_video(input_path, start_time, end_time):
     output_path = os.path.join(tempfile.gettempdir(), "cropped_video.mp4")
     try:
         with VideoFileClip(input_path) as video:
+            # Set the codec explicitly to avoid issues
             cropped_video = video.subclip(start_time, end_time)
-            cropped_video.write_videofile(output_path, codec='libx264', audio_codec='aac')
+            cropped_video.write_videofile(output_path, codec='libx264', audio_codec='aac', preset='ultrafast')
         return output_path
     except Exception as e:
         st.error(f"Failed to crop the video: {e}")
