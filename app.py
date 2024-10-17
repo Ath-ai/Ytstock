@@ -37,6 +37,11 @@ def main():
     url = st.text_input("Enter YouTube video URL:")
     if st.button("Download"):
         if url:
+            # Remove any existing cropped video before a new download
+            if os.path.exists(os.path.join(tempfile.gettempdir(), "cropped_video.mp4")):
+                os.remove(os.path.join(tempfile.gettempdir(), "cropped_video.mp4"))
+            
+            # Download new video
             temp_dir = download_youtube_video(url)
             if temp_dir:
                 video_files = [f for f in os.listdir(temp_dir) if f.endswith(('.mp4', '.mkv', '.webm'))]
