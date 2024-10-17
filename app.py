@@ -8,6 +8,7 @@ from moviepy.editor import VideoFileClip
 def download_youtube_video(url, quality):
     temp_dir = tempfile.mkdtemp()
     output_path = os.path.join(temp_dir, '%(title)s.%(ext)s')
+    
     # Use yt-dlp command with format option based on selected quality
     format_map = {
         "1080p": 'bestvideo[height<=1080]+bestaudio/best[height<=1080]',
@@ -32,7 +33,7 @@ def crop_video(input_path, start_time, end_time):
     output_path = os.path.join(tempfile.gettempdir(), "cropped_video.mp4")
     try:
         with VideoFileClip(input_path) as video:
-            # Set the codec explicitly to avoid issues
+            # Ensure the audio is included in the cropped video
             cropped_video = video.subclip(start_time, end_time)
             cropped_video.write_videofile(output_path, codec='libx264', audio_codec='aac', preset='ultrafast')
         return output_path
