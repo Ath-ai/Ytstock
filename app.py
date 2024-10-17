@@ -3,40 +3,53 @@ import streamlit as st
 import subprocess
 import tempfile
 from moviepy.editor import VideoFileClip
+import ffmpeg
 
-# Function to download video and audio separately and merge them using ffmpeg
+# Function to download video and audio separately
 def download_youtube_video(url):
     temp_dir = tempfile.mkdtemp()
     video_path = os.path.join(temp_dir, 'video.mp4')
     audio_path = os.path.join(temp_dir, 'audio.m4a')
     output_path = os.path.join(temp_dir, 'final_video.mp4')
 
-    # Download 1080p video and audio separately
+    # Download video and audio separately
     video_command = f'yt-dlp -f "bestvideo[height<=1080]" -o "{video_path}" {url}'
     audio_command = f'yt-dlp -f "bestaudio" -o "{audio_path}" {url}'
 
     try:
-        # Download video and audio streams
+        # Download video and audio
         subprocess.run(video_command, shell=True, check=True)
         subprocess.run(audio_command, shell=True, check=True)
 
-        # Merge video and audio using ffmpeg
-        merge_command = f'ffmpeg -i "{video_path}" -i "{audio_path}" -c:v copy -c:a aac "{output_path}"'
-        subprocess.run(merge_command, shell=True, check=True)
-
-        return output_path, temp_dir
+        # Merge video and audio
+        merged_video_path = merge_video_audio(video_path, audio_path, output_path)
+        return merged_video_path, temp_dir
     except subprocess.CalledProcessError as e:
         st.error(f"Failed to download or merge video and audio: {e}")
         return None, None
 
-# Function to crop video and preserve audio
+# Function to merge video and audio using ffmpeg-python
+def merge_video_audio(video_path, audio_path, output_path):
+    try:
+        (
+            ffmpeg
+            .input(video_path)
+            .input(audio_path)
+            .output(output_path, vcodec='copy', acodec='aac')
+            .run(overwrite_output=True)
+        )
+        return output_path
+    except ffmpeg.Error as e:
+        st.error(f"Failed to merge video and audio: {e}")
+        return None
+
+# Function to crop video
 def crop_video(input_path, start_time, end_time):
     output_path = os.path.join(tempfile.gettempdir(), "cropped_video.mp4")
     try:
         with VideoFileClip(input_path) as video:
-            # Crop video and keep the audio
             cropped_video = video.subclip(start_time, end_time)
-            cropped_video.write_videofile(output_path, codec='libx264', audio_codec='aac', preset='fast', threads=4)
+            cropped_video.write_videofile(output_path, codec='libx264', audio_codec='aac')
         return output_path
     except Exception as e:
         st.error(f"Failed to crop the video: {e}")
@@ -79,7 +92,7 @@ def main():
             if st.session_state.cropped_video_path and os.path.exists(st.session_state.cropped_video_path):
                 os.remove(st.session_state.cropped_video_path)
 
-            # Download the video and audio, and merge them
+            # Download the video
             video_path, temp_dir = download_youtube_video(url)
             if video_path:
                 st.session_state.downloaded = True
