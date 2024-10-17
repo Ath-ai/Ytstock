@@ -4,19 +4,30 @@ import subprocess
 import tempfile
 from moviepy.editor import VideoFileClip
 
-# Function to download YouTube video in high quality (1080p) and combine video/audio
+# Function to download video and audio separately and merge them using ffmpeg
 def download_youtube_video(url):
     temp_dir = tempfile.mkdtemp()
-    output_path = os.path.join(temp_dir, '%(title)s.%(ext)s')
-    # Download best video and best audio, merge into one file
-    command = f'yt-dlp -f "bestvideo[height<=1080]+bestaudio/best" --merge-output-format mp4 {url} -o "{output_path}"'
+    video_path = os.path.join(temp_dir, 'video.mp4')
+    audio_path = os.path.join(temp_dir, 'audio.m4a')
+    output_path = os.path.join(temp_dir, 'final_video.mp4')
+
+    # Download 1080p video and audio separately
+    video_command = f'yt-dlp -f "bestvideo[height<=1080]" -o "{video_path}" {url}'
+    audio_command = f'yt-dlp -f "bestaudio" -o "{audio_path}" {url}'
 
     try:
-        subprocess.run(command, shell=True, check=True)
-        return temp_dir
+        # Download video and audio streams
+        subprocess.run(video_command, shell=True, check=True)
+        subprocess.run(audio_command, shell=True, check=True)
+
+        # Merge video and audio using ffmpeg
+        merge_command = f'ffmpeg -i "{video_path}" -i "{audio_path}" -c:v copy -c:a aac "{output_path}"'
+        subprocess.run(merge_command, shell=True, check=True)
+
+        return output_path, temp_dir
     except subprocess.CalledProcessError as e:
-        st.error(f"Failed to download video: {e}")
-        return None
+        st.error(f"Failed to download or merge video and audio: {e}")
+        return None, None
 
 # Function to crop video and preserve audio
 def crop_video(input_path, start_time, end_time):
@@ -68,17 +79,13 @@ def main():
             if st.session_state.cropped_video_path and os.path.exists(st.session_state.cropped_video_path):
                 os.remove(st.session_state.cropped_video_path)
 
-            # Download the video
-            temp_dir = download_youtube_video(url)
-            if temp_dir:
-                video_files = [f for f in os.listdir(temp_dir) if f.endswith(('.mp4', '.mkv', '.webm'))]
-                if video_files:
-                    st.session_state.downloaded = True
-                    st.session_state.temp_dir = temp_dir
-                    st.session_state.video_path = os.path.join(temp_dir, video_files[0])
-                    st.video(st.session_state.video_path)
-                else:
-                    st.error("No video found to display.")
+            # Download the video and audio, and merge them
+            video_path, temp_dir = download_youtube_video(url)
+            if video_path:
+                st.session_state.downloaded = True
+                st.session_state.temp_dir = temp_dir
+                st.session_state.video_path = video_path
+                st.video(st.session_state.video_path)
             else:
                 st.error("No video found to display.")
         else:
