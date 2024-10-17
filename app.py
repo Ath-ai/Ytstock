@@ -5,14 +5,14 @@ import tempfile
 from moviepy.editor import VideoFileClip
 import ffmpeg
 
-# Function to download video and audio separately
+# Function to download video and audio separately using yt-dlp
 def download_youtube_video(url):
     temp_dir = tempfile.mkdtemp()
     video_path = os.path.join(temp_dir, 'video.mp4')
     audio_path = os.path.join(temp_dir, 'audio.m4a')
     output_path = os.path.join(temp_dir, 'final_video.mp4')
 
-    # Download video and audio separately
+    # Download video and audio separately using yt-dlp
     video_command = f'yt-dlp -f "bestvideo[height<=1080]" -o "{video_path}" {url}'
     audio_command = f'yt-dlp -f "bestaudio" -o "{audio_path}" {url}'
 
@@ -21,7 +21,7 @@ def download_youtube_video(url):
         subprocess.run(video_command, shell=True, check=True)
         subprocess.run(audio_command, shell=True, check=True)
 
-        # Merge video and audio
+        # Merge video and audio using ffmpeg-python
         merged_video_path = merge_video_audio(video_path, audio_path, output_path)
         return merged_video_path, temp_dir
     except subprocess.CalledProcessError as e:
@@ -31,6 +31,7 @@ def download_youtube_video(url):
 # Function to merge video and audio using ffmpeg-python
 def merge_video_audio(video_path, audio_path, output_path):
     try:
+        # Use ffmpeg-python to merge video and audio
         (
             ffmpeg
             .input(video_path)
@@ -43,7 +44,7 @@ def merge_video_audio(video_path, audio_path, output_path):
         st.error(f"Failed to merge video and audio: {e}")
         return None
 
-# Function to crop video
+# Function to crop video using moviepy
 def crop_video(input_path, start_time, end_time):
     output_path = os.path.join(tempfile.gettempdir(), "cropped_video.mp4")
     try:
