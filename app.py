@@ -8,7 +8,7 @@ from moviepy.editor import VideoFileClip
 def download_youtube_video(url):
     temp_dir = tempfile.mkdtemp()
     output_path = os.path.join(temp_dir, '%(title)s.%(ext)s')
-    # Use best video and audio streams available, merging them into a single file
+    # Download best video and audio streams, merging them into a single file
     command = f'yt-dlp -f "bestvideo[height<=1080]+bestaudio/best" {url} -o "{output_path}" --merge-output-format mp4'
 
     try:
@@ -22,7 +22,18 @@ def download_youtube_video(url):
 def crop_video(input_path, start_time, end_time):
     output_path = os.path.join(tempfile.gettempdir(), "cropped_video.mp4")
     try:
+        # Use VideoFileClip to handle the video correctly
         with VideoFileClip(input_path) as video:
+            # Check if the video is valid
+            if video.reader.nframes == 0:
+                st.error("The downloaded video is empty or corrupted.")
+                return None
+            
+            # Ensure the cropping times are within the duration of the video
+            if end_time > video.duration:
+                st.error("End time exceeds the video duration.")
+                return None
+            
             cropped_video = video.subclip(start_time, end_time)
             cropped_video.write_videofile(output_path, codec='libx264', audio_codec='aac', preset='fast', threads=4)
         return output_path
