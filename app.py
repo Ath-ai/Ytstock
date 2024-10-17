@@ -29,7 +29,18 @@ def crop_video(input_path, start_time, end_time):
         st.error(f"Failed to crop the video: {e}")
         return None
 
-# Function to format time
+# Function to convert "minutes:seconds" to total seconds
+def convert_to_seconds(time_str):
+    if time_str:
+        try:
+            minutes, seconds = map(float, time_str.split(':'))
+            return minutes * 60 + seconds
+        except ValueError:
+            st.error("Invalid time format. Please use 'minutes:seconds' format (e.g., '2:22').")
+            return None
+    return 0
+
+# Function to format time for display
 def format_time(seconds):
     minutes = int(seconds // 60)
     seconds = int(seconds % 60)
@@ -73,27 +84,32 @@ def main():
 
     # Show crop options only if a video is downloaded
     if st.session_state.downloaded:
-        start_time = st.number_input("Start Time (in seconds)", min_value=0.0, value=0.0)
-        end_time = st.number_input("End Time (in seconds)", min_value=0.0, value=10.0)
+        start_time_input = st.text_input("Start Time (minutes:seconds)", value="0:00")
+        end_time_input = st.text_input("End Time (minutes:seconds)", value="0:10")
 
-        # Display formatted time
-        st.write(f"Start Time: {format_time(start_time)}")
-        st.write(f"End Time: {format_time(end_time)}")
+        # Convert to seconds
+        start_time = convert_to_seconds(start_time_input)
+        end_time = convert_to_seconds(end_time_input)
 
-        # Crop button
-        if st.button("Crop Video"):
-            if end_time > start_time and st.session_state.video_path:
-                cropped_video_path = crop_video(st.session_state.video_path, start_time, end_time)
-                if cropped_video_path:
-                    st.session_state.cropped_video_path = cropped_video_path
-                    st.success("Video cropped successfully!")
-                    st.video(cropped_video_path)
+        # Display formatted time if conversion was successful
+        if start_time is not None and end_time is not None:
+            st.write(f"Start Time: {format_time(start_time)}")
+            st.write(f"End Time: {format_time(end_time)}")
 
-                    # Download button for the cropped video
-                    with open(cropped_video_path, "rb") as f:
-                        st.download_button("Download Cropped Video", f, file_name="cropped_video.mp4")
-            else:
-                st.error("End time must be greater than start time.")
+            # Crop button
+            if st.button("Crop Video"):
+                if end_time > start_time and st.session_state.video_path:
+                    cropped_video_path = crop_video(st.session_state.video_path, start_time, end_time)
+                    if cropped_video_path:
+                        st.session_state.cropped_video_path = cropped_video_path
+                        st.success("Video cropped successfully!")
+                        st.video(cropped_video_path)
+
+                        # Download button for the cropped video
+                        with open(cropped_video_path, "rb") as f:
+                            st.download_button("Download Cropped Video", f, file_name="cropped_video.mp4")
+                else:
+                    st.error("End time must be greater than start time.")
 
     # Reset button to clear state
     if st.button("Reset"):
