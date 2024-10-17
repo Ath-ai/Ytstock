@@ -4,12 +4,12 @@ import subprocess
 import tempfile
 from moviepy.editor import VideoFileClip
 
-# Function to download YouTube video
+# Function to download YouTube video in high quality (1080p)
 def download_youtube_video(url):
     temp_dir = tempfile.mkdtemp()
     output_path = os.path.join(temp_dir, '%(title)s.%(ext)s')
-    command = f'yt-dlp {url} -o "{output_path}"'
-    
+    command = f'yt-dlp -f "bestvideo[height<=1080]+bestaudio/best[height<=1080]" {url} -o "{output_path}"'
+
     try:
         subprocess.run(command, shell=True, check=True)
         return temp_dir
