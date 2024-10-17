@@ -8,7 +8,8 @@ from moviepy.editor import VideoFileClip
 def download_youtube_video(url):
     temp_dir = tempfile.mkdtemp()
     output_path = os.path.join(temp_dir, '%(title)s.%(ext)s')
-    command = f'yt-dlp {url} -o "{output_path}"'
+    # Use yt-dlp command with format option for best quality up to 1080p
+    command = f'yt-dlp -f "bestvideo[height<=1080]+bestaudio/best[height<=1080]" {url} -o "{output_path}"'
     
     try:
         subprocess.run(command, shell=True, check=True)
