@@ -1,95 +1,52 @@
-import os
-import re
-import subprocess
-from moviepy.editor import VideoFileClip
 import streamlit as st
+import os
+import subprocess
+import tempfile
+from moviepy.editor import VideoFileClip
 
-# Directory for downloads
-DOWNLOAD_DIR = './downloads'
-
-# Create the download directory if it doesn't exist
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-# Function to download YouTube video using yt-dlp
-def download_youtube_video(url):
-    # Sanitize URL by removing query parameters (everything after '?')
-    clean_url = re.sub(r'\?.*$', '', url)
-    
+# Function to download YouTube video
+def download_youtube_video(url, download_path):
+    command = f'yt-dlp {url} -o "{download_path}/%(title)s.%(ext)s"'
     try:
-        # yt-dlp command to download the video
-        command = f'yt-dlp {clean_url} -o "{DOWNLOAD_DIR}/%(title)s.%(ext)s"'
-        result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
-
-        # Check for output files in the download directory
-        video_files = [f for f in os.listdir(DOWNLOAD_DIR) if f.endswith(".mp4")]
-        if video_files:
-            video_file_path = os.path.join(DOWNLOAD_DIR, video_files[0])
-            return video_file_path
-        else:
-            return None
+        subprocess.run(command, shell=True, check=True)
+        return True
     except subprocess.CalledProcessError as e:
-        # Capture detailed error message
-        st.error(f"Download failed: {e.output or e.stderr}")
-        return None
+        st.error(f"Failed to download video: {e}")
+        return False
 
-# Function to crop video using MoviePy
-def crop_video(input_path, start_time, end_time):
+# Function to crop video
+def crop_video(input_path, start_time, end_time, output_path):
     try:
-        # Load video file
-        clip = VideoFileClip(input_path)
-        
-        # Crop the video by selecting the start and end times
-        cropped_clip = clip.subclip(start_time, end_time)
-        
-        # Generate the output file name
-        output_path = os.path.join(DOWNLOAD_DIR, f"cropped_{os.path.basename(input_path)}")
-        
-        # Write the cropped video to a new file
-        cropped_clip.write_videofile(output_path, codec='libx264')
-        
-        return output_path
+        with VideoFileClip(input_path) as video:
+            cropped_video = video.subclip(start_time, end_time)
+            cropped_video.write_videofile(output_path, codec="libx264", audio_codec="aac")
+            return True
     except Exception as e:
-        st.error(f"Failed to crop the video: {str(e)}")
-        return None
+        st.error(f"Failed to crop the video: {e}")
+        return False
 
-# Streamlit Interface
-def main():
-    st.title("YouTube Video Downloader and Cropper")
-    
-    # User input for YouTube URL
-    video_url = st.text_input("Enter YouTube video URL:")
-    
-    # Download button
-    if st.button("Download Video"):
-        if video_url:
-            video_path = download_youtube_video(video_url)
-            if video_path:
-                st.success(f"Video downloaded successfully: {video_path}")
-                st.video(video_path)
-            else:
-                st.error("Failed to download video.")
-    
-    # Show cropper options if a video was downloaded
-    if os.listdir(DOWNLOAD_DIR):
-        st.subheader("Crop the downloaded video")
-        
-        # Allow the user to specify start and end times
-        start_time = st.number_input("Start time (seconds)", min_value=0)
-        end_time = st.number_input("End time (seconds)", min_value=0)
-        
-        # Get the latest downloaded video for cropping
-        downloaded_videos = [f for f in os.listdir(DOWNLOAD_DIR) if f.endswith(".mp4")]
-        if downloaded_videos:
-            latest_video = os.path.join(DOWNLOAD_DIR, downloaded_videos[-1])
-            
-            if st.button("Crop Video"):
-                if end_time > start_time:
-                    cropped_path = crop_video(latest_video, start_time, end_time)
-                    if cropped_path:
-                        st.success(f"Video cropped successfully: {cropped_path}")
-                        st.video(cropped_path)
-                else:
-                    st.error("End time must be greater than start time.")
+# Streamlit app interface
+st.title("YouTube Video Crop and Download")
 
-if __name__ == "__main__":
-    main()
+# Input fields for YouTube URL and cropping times
+url = st.text_input("Enter YouTube video URL:")
+start_time = st.number_input("Start Time (in seconds):", min_value=0.0, format="%.2f")
+end_time = st.number_input("End Time (in seconds):", min_value=0.0, format="%.2f")
+
+# Button to initiate the download and crop process
+if st.button("Download and Crop Video"):
+    # Create a temporary directory to store files
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Define paths
+        download_path = os.path.join(temp_dir, "downloaded_video.mp4")
+        cropped_path = os.path.join(temp_dir, "cropped_video.mp4")
+
+        # Download the video
+        if download_youtube_video(url, temp_dir):
+            # Crop the video
+            if crop_video(download_path, start_time, end_time, cropped_path):
+                # Provide a download link for the cropped video
+                with open(cropped_path, "rb") as f:
+                    st.download_button("Download Cropped Video", f, file_name="cropped_video.mp4")
+
+# Note: The temporary files will be automatically deleted when leaving the `with` block
