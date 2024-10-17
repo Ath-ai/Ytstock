@@ -34,18 +34,25 @@ def crop_video(input_path, start_time, end_time):
 def main():
     st.title("YouTube Video Downloader and Cropper")
 
+    # Store the state of whether a video has been downloaded
+    if 'downloaded' not in st.session_state:
+        st.session_state.downloaded = False
+        st.session_state.temp_dir = None  # Store temp directory in session state
+
     url = st.text_input("Enter YouTube video URL:")
     if st.button("Download"):
         if url:
             # Remove any existing cropped video before a new download
             if os.path.exists(os.path.join(tempfile.gettempdir(), "cropped_video.mp4")):
                 os.remove(os.path.join(tempfile.gettempdir(), "cropped_video.mp4"))
-            
+
             # Download new video
             temp_dir = download_youtube_video(url)
             if temp_dir:
                 video_files = [f for f in os.listdir(temp_dir) if f.endswith(('.mp4', '.mkv', '.webm'))]
                 if video_files:
+                    st.session_state.downloaded = True  # Set the downloaded flag
+                    st.session_state.temp_dir = temp_dir  # Save temp_dir to session state
                     video_path = os.path.join(temp_dir, video_files[0])
                     st.video(video_path)
 
@@ -60,19 +67,23 @@ def main():
                                     st.download_button("Download Cropped Video", f, file_name="cropped_video.mp4")
                         else:
                             st.error("End time must be greater than start time.")
-
-                # Clean up temporary files
-                st.session_state.temp_dir = temp_dir  # Save temp_dir to session state
-                st.write("Temporary files will be deleted on page exit or after download.")
+                else:
+                    st.error("No video found to display.")
             else:
                 st.error("No video found to display.")
-    else:
-        # Clean up on exit
-        if 'temp_dir' in st.session_state:
+        else:
+            st.error("Please enter a valid YouTube URL.")
+
+    # Reset state if user downloads cropped video or leaves the page
+    if st.session_state.downloaded and st.button("Reset"):
+        # Clean up temporary files
+        if st.session_state.temp_dir:
             for filename in os.listdir(st.session_state.temp_dir):
                 os.remove(os.path.join(st.session_state.temp_dir, filename))
             os.rmdir(st.session_state.temp_dir)  # Remove the temporary directory
-            del st.session_state.temp_dir  # Remove the session state entry
+            st.session_state.temp_dir = None  # Reset temp_dir
+        st.session_state.downloaded = False  # Reset downloaded flag
+        st.experimental_rerun()  # Refresh the page
 
 if __name__ == "__main__":
     main()
