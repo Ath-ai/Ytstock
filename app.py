@@ -3,24 +3,12 @@ import streamlit as st
 import subprocess
 import tempfile
 from moviepy.editor import VideoFileClip
-import imageio_ffmpeg as ffmpeg  # Import ffmpeg via imageio
 
 # Function to download YouTube video
-def download_youtube_video(url, quality):
+def download_youtube_video(url):
     temp_dir = tempfile.mkdtemp()
     output_path = os.path.join(temp_dir, '%(title)s.%(ext)s')
-
-    # Format map for different video qualities
-    format_map = {
-        "1080p": 'bestvideo[height<=1080]+bestaudio/best[height<=1080]',
-        "720p": 'bestvideo[height<=720]+bestaudio/best[height<=720]',
-        "480p": 'bestvideo[height<=480]+bestaudio/best[height<=480]',
-        "360p": 'bestvideo[height<=360]+bestaudio/best[height<=360]',
-        "Lowest": 'worst'
-    }
-    
-    selected_format = format_map.get(quality, 'best')
-    command = f'yt-dlp -f "{selected_format}" {url} -o "{output_path}" --merge-output-format mp4'
+    command = f'yt-dlp {url} -o "{output_path}"'
     
     try:
         subprocess.run(command, shell=True, check=True)
@@ -34,9 +22,8 @@ def crop_video(input_path, start_time, end_time):
     output_path = os.path.join(tempfile.gettempdir(), "cropped_video.mp4")
     try:
         with VideoFileClip(input_path) as video:
-            # Set the codec explicitly to avoid issues
             cropped_video = video.subclip(start_time, end_time)
-            cropped_video.write_videofile(output_path, codec='libx264', audio_codec='aac', preset='ultrafast')
+            cropped_video.write_videofile(output_path, codec='libx264', audio_codec='aac')
         return output_path
     except Exception as e:
         st.error(f"Failed to crop the video: {e}")
@@ -72,9 +59,6 @@ def main():
 
     url = st.text_input("Enter YouTube video URL:")
     
-    # Quality selection dropdown
-    quality = st.selectbox("Select Video Quality:", ["1080p", "720p", "480p", "360p", "Lowest"])
-
     # Download button
     if st.button("Download"):
         if url:
@@ -83,7 +67,7 @@ def main():
                 os.remove(st.session_state.cropped_video_path)
 
             # Download the video
-            temp_dir = download_youtube_video(url, quality)
+            temp_dir = download_youtube_video(url)
             if temp_dir:
                 video_files = [f for f in os.listdir(temp_dir) if f.endswith(('.mp4', '.mkv', '.webm'))]
                 if video_files:
