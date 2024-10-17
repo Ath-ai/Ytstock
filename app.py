@@ -4,12 +4,12 @@ import subprocess
 import tempfile
 from moviepy.editor import VideoFileClip
 
-# Function to download YouTube video in high quality (1080p) and combine video/audio if necessary
+# Function to download YouTube video in high quality (1080p) and combine video/audio
 def download_youtube_video(url):
     temp_dir = tempfile.mkdtemp()
     output_path = os.path.join(temp_dir, '%(title)s.%(ext)s')
-    # Combine video and audio streams if necessary using yt-dlp's merge output format
-    command = f'yt-dlp -f "bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4][height<=1080]" {url} -o "{output_path}"'
+    # Download best video and best audio, merge into one file
+    command = f'yt-dlp -f "bestvideo[height<=1080]+bestaudio/best" --merge-output-format mp4 {url} -o "{output_path}"'
 
     try:
         subprocess.run(command, shell=True, check=True)
@@ -18,11 +18,12 @@ def download_youtube_video(url):
         st.error(f"Failed to download video: {e}")
         return None
 
-# Function to crop video
+# Function to crop video and preserve audio
 def crop_video(input_path, start_time, end_time):
     output_path = os.path.join(tempfile.gettempdir(), "cropped_video.mp4")
     try:
         with VideoFileClip(input_path) as video:
+            # Crop video and keep the audio
             cropped_video = video.subclip(start_time, end_time)
             cropped_video.write_videofile(output_path, codec='libx264', audio_codec='aac', preset='fast', threads=4)
         return output_path
