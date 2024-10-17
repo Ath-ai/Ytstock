@@ -6,14 +6,13 @@ from moviepy.editor import VideoFileClip
 
 # Function to download YouTube video
 def download_youtube_video(url):
-    # Create a temporary directory
     temp_dir = tempfile.mkdtemp()
     output_path = os.path.join(temp_dir, '%(title)s.%(ext)s')
     command = f'yt-dlp {url} -o "{output_path}"'
     
     try:
         subprocess.run(command, shell=True, check=True)
-        return temp_dir  # Return temp directory containing the downloaded video
+        return temp_dir
     except subprocess.CalledProcessError as e:
         st.error(f"Failed to download video: {e}")
         return None
@@ -34,26 +33,23 @@ def crop_video(input_path, start_time, end_time):
 def main():
     st.title("YouTube Video Downloader and Cropper")
 
-    # Store the state of whether a video has been downloaded
     if 'downloaded' not in st.session_state:
         st.session_state.downloaded = False
-        st.session_state.temp_dir = None  # Store temp directory in session state
-        st.session_state.cropped_video_path = None  # Store cropped video path in session state
+        st.session_state.temp_dir = None
+        st.session_state.cropped_video_path = None
 
     url = st.text_input("Enter YouTube video URL:")
     if st.button("Download"):
         if url:
-            # Remove any existing cropped video before a new download
             if os.path.exists(os.path.join(tempfile.gettempdir(), "cropped_video.mp4")):
                 os.remove(os.path.join(tempfile.gettempdir(), "cropped_video.mp4"))
 
-            # Download new video
             temp_dir = download_youtube_video(url)
             if temp_dir:
                 video_files = [f for f in os.listdir(temp_dir) if f.endswith(('.mp4', '.mkv', '.webm'))]
                 if video_files:
-                    st.session_state.downloaded = True  # Set the downloaded flag
-                    st.session_state.temp_dir = temp_dir  # Save temp_dir to session state
+                    st.session_state.downloaded = True
+                    st.session_state.temp_dir = temp_dir
                     video_path = os.path.join(temp_dir, video_files[0])
                     st.video(video_path)
 
@@ -64,9 +60,9 @@ def main():
                         if end_time > start_time:
                             cropped_video_path = crop_video(video_path, start_time, end_time)
                             if cropped_video_path:
-                                st.session_state.cropped_video_path = cropped_video_path  # Save the cropped video path
+                                st.session_state.cropped_video_path = cropped_video_path
                                 st.success("Video cropped successfully!")
-                                st.video(cropped_video_path)  # Display the cropped video
+                                st.video(cropped_video_path)
                                 with open(cropped_video_path, "rb") as f:
                                     st.download_button("Download Cropped Video", f, file_name="cropped_video.mp4")
                         else:
@@ -78,17 +74,15 @@ def main():
         else:
             st.error("Please enter a valid YouTube URL.")
 
-    # Reset state if user downloads cropped video or leaves the page
     if st.session_state.downloaded and st.button("Reset"):
-        # Clean up temporary files
         if st.session_state.temp_dir:
             for filename in os.listdir(st.session_state.temp_dir):
                 os.remove(os.path.join(st.session_state.temp_dir, filename))
-            os.rmdir(st.session_state.temp_dir)  # Remove the temporary directory
-            st.session_state.temp_dir = None  # Reset temp_dir
-        st.session_state.downloaded = False  # Reset downloaded flag
-        st.session_state.cropped_video_path = None  # Reset cropped video path
-        st.experimental_rerun()  # Refresh the page
+            os.rmdir(st.session_state.temp_dir)
+            st.session_state.temp_dir = None
+        st.session_state.downloaded = False
+        st.session_state.cropped_video_path = None
+        st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
