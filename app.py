@@ -4,11 +4,11 @@ import subprocess
 import tempfile
 from moviepy.editor import VideoFileClip
 
-# Function to download YouTube video
-def download_youtube_video(url):
+# Function to download YouTube video with selected quality
+def download_youtube_video(url, quality="best"):
     temp_dir = tempfile.mkdtemp()
     output_path = os.path.join(temp_dir, '%(title)s.%(ext)s')
-    command = f'yt-dlp {url} -o "{output_path}"'
+    command = f'yt-dlp -f "bestvideo[height<={quality}]+bestaudio/best" {url} -o "{output_path}"'
     
     try:
         subprocess.run(command, shell=True, check=True)
@@ -59,6 +59,10 @@ def main():
 
     url = st.text_input("Enter YouTube video URL:")
     
+    # Quality selection
+    quality = st.selectbox("Select Video Quality", ["best", "720p", "480p", "360p"])
+    quality_map = {"best": "2160", "720p": "720", "480p": "480", "360p": "360"}
+
     # Download button
     if st.button("Download"):
         if url:
@@ -67,7 +71,7 @@ def main():
                 os.remove(st.session_state.cropped_video_path)
 
             # Download the video
-            temp_dir = download_youtube_video(url)
+            temp_dir = download_youtube_video(url, quality_map[quality])
             if temp_dir:
                 video_files = [f for f in os.listdir(temp_dir) if f.endswith(('.mp4', '.mkv', '.webm'))]
                 if video_files:
