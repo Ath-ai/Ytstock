@@ -53,15 +53,6 @@ def main():
 
     import streamlit as st
 
-# Hide the Streamlit footer and fork button
-hide_streamlit_style = """
-            <style>
-            footer {visibility: hidden;}
-            .css-18ni7ap {display: none;}
-            </style>
-            """
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
-
 
 
 
