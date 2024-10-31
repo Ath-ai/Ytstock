@@ -50,12 +50,6 @@ def format_time(seconds):
 def main():
     st.title("YouTube Video Downloader and Cropper")
 
-
-    import streamlit as st
-
-
-
-
     # Initialize session state variables
     if 'downloaded' not in st.session_state:
         st.session_state.downloaded = False
