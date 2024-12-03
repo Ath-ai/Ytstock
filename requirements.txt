@@ -2,3 +2,4 @@ streamlit
 yt-dlp
 moviepy
 ffmpeg-python
+moviepy.editor
