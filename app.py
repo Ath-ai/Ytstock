@@ -2,7 +2,13 @@ import os
 import streamlit as st
 import subprocess
 import tempfile
-from moviepy.editor import VideoFileClip
+
+# Check if MoviePy and FFmpeg are installed
+try:
+    from moviepy.editor import VideoFileClip
+except ImportError as e:
+    st.error("The `moviepy` module is not installed. Please ensure it is listed in `requirements.txt`.")
+    st.stop()
 
 # Function to download YouTube video with selected quality
 def download_youtube_video(url, quality="best"):
